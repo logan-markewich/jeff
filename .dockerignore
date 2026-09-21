@@ -1,0 +1,11 @@
+.git
+.venv
+models
+*.onnx
+__pycache__
+*.pyc
+.pytest_cache
+.env
+PLAN.md
+bench
+tests

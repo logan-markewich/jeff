@@ -1,0 +1,46 @@
+services:
+  jeff:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jeff:latest
+    container_name: jeff
+    restart: unless-stopped
+    ports:
+      - "${JEFF_PORT:-8000}:8000"
+    env_file:
+      # Every JEFF_* variable in .env is passed straight into the container.
+      # Copy .env.example to .env to see/set the full list (batching, rate
+      # limiting, request limits, model/backend tuning, ...).
+      - path: .env
+        required: false
+    environment:
+      # Fixed for the container regardless of .env: it always listens on
+      # 8000 internally. Change the externally-published port via JEFF_PORT
+      # in .env instead (see the "ports" mapping above). JEFF_MODEL is left
+      # to .env / the app's own default so it stays in sync with the
+      # "models" volume mount below.
+      JEFF_HOST: 0.0.0.0
+      JEFF_PORT: 8000
+    volumes:
+      # Persists the downloaded model weights (~400M params) across restarts
+      # so they aren't re-fetched from Hugging Face on every container start.
+      - models:/app/models
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 180s
+    # GPU deployment: uncomment below (requires the NVIDIA Container Toolkit
+    # on the host) and set JEFF_DEVICE=cuda above.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  models:
