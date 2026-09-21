@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from jeff.core import Engine, ScoredText
+from jeff.core import Engine, PromptOptions, ScoredText
 from jeff.server.app import create_app
 from jeff.server.config import Settings
 from tests.fixtures import CHOICE_REQ, SCORE_REQ
@@ -77,6 +77,21 @@ def test_limits():
         big = {**SCORE_REQ, "state": "short"}
         r = c.post("/v1/systemone", json=big)
         assert r.status_code == 422 and r.json()["detail"][0]["loc"][-1] == "criteria"
+
+
+def test_state_limit_uses_configured_format():
+    # kv-rendering of this state is 23 chars, json-rendering is 29; the cap must be
+    # checked against the format actually sent to the model (state_format), not kv.
+    state = {"a": "x" * 20}
+    s = Settings(max_state_chars=25)
+    app_json = create_app(s, Engine(FakeBackend(), s.model_name, PromptOptions(state_format="json")))
+    with TestClient(app_json) as c:
+        r = c.post("/v1/systemone", json={**SCORE_REQ, "state": state})
+        assert r.status_code == 422 and r.json()["detail"][0]["loc"][-1] == "state"
+    app_kv = create_app(s, Engine(FakeBackend(), s.model_name, PromptOptions(state_format="kv")))
+    with TestClient(app_kv) as c:
+        r = c.post("/v1/systemone", json={**SCORE_REQ, "state": state})
+        assert r.status_code == 200, r.text
 
 
 def test_rate_limit():

@@ -158,7 +158,8 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
             return _validation_error(
                 ["body", "questions"], f"At most {cfg.max_questions} questions per request", "too_long"
             )
-        if len(serialize_state(body.state)) > cfg.max_state_chars:
+        state_format = request.app.state.engine.opts.state_format
+        if len(serialize_state(body.state, state_format)) > cfg.max_state_chars:
             return _validation_error(
                 ["body", "state"], f"State exceeds {cfg.max_state_chars} characters", "string_too_long"
             )

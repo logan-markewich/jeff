@@ -85,9 +85,14 @@ def _dedupe(labels: tuple[str, ...]) -> tuple[str, ...]:
     """Suffix duplicate labels so GLiFormer does not collapse their scores."""
     if len(set(labels)) == len(labels):
         return labels
-    seen: dict[str, int] = {}
+    used: set[str] = set()
     out = []
     for label in labels:
-        seen[label] = seen.get(label, 0) + 1
-        out.append(label if seen[label] == 1 else f"{label} #{seen[label]}")
+        candidate = label
+        n = 2
+        while candidate in used:
+            candidate = f"{label} #{n}"
+            n += 1
+        used.add(candidate)
+        out.append(candidate)
     return tuple(out)

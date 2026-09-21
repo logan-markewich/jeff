@@ -108,6 +108,20 @@ def test_duplicate_levels_stay_aligned():
     assert g.labels == ("low", "low #2", "high")
 
 
+def test_dedupe_avoids_colliding_with_existing_label():
+    # "a" repeats and would naively dedupe to "a #2", but "a #2" is already
+    # present in the input, so the naive suffix must not collide with it.
+    r = SystemOneRequest.model_validate(
+        {
+            "state": "x",
+            "model": "m",
+            "questions": {"q": {"type": "score", "instructions": "?", "criteria": ["a #2", "a", "a"]}},
+        }
+    )
+    (g,) = build_groups(r.questions)
+    assert len(set(g.labels)) == len(g.labels)
+
+
 def test_group_rejects_duplicate_labels():
     with pytest.raises(ValueError):
         Group(key="k", labels=("a", "a"))
